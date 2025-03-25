@@ -22,6 +22,8 @@ const db_1 = require("./lib/db");
 const token_1 = require("./lib/token");
 const auth_middleware_1 = require("./middleware/auth.middleware");
 const contents_model_1 = require("./models/contents.model");
+const links_model_1 = require("./models/links.model");
+const random_util_1 = require("./util/random.util");
 const app = (0, express_1.default)();
 dotenv_1.default.config();
 const PORT = process.env.PORT;
@@ -134,14 +136,14 @@ app.get('/api/v1/content', (req, res) => __awaiter(void 0, void 0, void 0, funct
         // populate() : to bring all the data of the userId  and select: just username if not mention then all content selected
     }).populate({
         path: "userId",
-        select: "username password"
+        select: "username"
     });
     res.status(200).json({
         message: content
     });
 }));
 // delete content route 
-app.delete('/api/v1/signin', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.delete('/api/v1/delete', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const contentId = req.body.contentId;
     yield contents_model_1.Content.deleteOne({
         contentId,
@@ -150,11 +152,66 @@ app.delete('/api/v1/signin', (req, res) => __awaiter(void 0, void 0, void 0, fun
     });
 }));
 // post / share brain route 
-app.post('/api/v1/brain/share', (req, res) => {
-});
+app.post('/api/v1/brain/share', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const share = req.body.share; // true / false 
+    try {
+        if (share) {
+            const hash = (0, random_util_1.random)(10);
+            yield links_model_1.Links.create({
+                hash: hash,
+                // @ts-ignore
+                userId: req.userId
+            });
+            res.status(200).json({
+                message: "link genrated at: /share/" + hash
+            });
+        }
+        else {
+            yield links_model_1.Links.deleteOne({
+                // @ts-ignore
+                userId: req.userId
+            });
+            res.status(200).json({
+                message: "Removed link"
+            });
+        }
+    }
+    catch (err) {
+        res.status(400).json({
+            message: "Action is repreated"
+        });
+        return;
+    }
+}));
 // post / share using id route 
-app.get('/api/v1/brain/:shareLink', (req, res) => {
-});
+app.get('/api/v1/brain/:shareLink', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const hash = req.params.shareLink;
+    const link = yield links_model_1.Links.findOne({
+        hash: hash
+    });
+    if (!link) {
+        res.status(411).json({
+            message: "Sorry link not found!"
+        });
+        return;
+    }
+    const constentShare = yield contents_model_1.Content.find({
+        userId: link.userId
+    });
+    const userShare = yield users_model_1.Users.findOne({
+        _id: link.userId
+    });
+    if (!constentShare || !userShare) {
+        res.status(400).json({
+            message: " No content or user found present!"
+        });
+        return;
+    }
+    res.status(200).json({
+        username: userShare.username,
+        constent: constentShare
+    });
+}));
 app.listen(PORT, () => {
     console.log("listening on PORT : " + PORT);
     (0, db_1.connectDB)();

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { query } from 'express';
 import { Request, Response } from "express";
 import dotenv from 'dotenv';
 import {z} from 'zod';
@@ -10,7 +10,8 @@ import { connectDB } from './lib/db';
 import {genToken} from './lib/token';
 import {authMiddleware} from './middleware/auth.middleware'
 import { Content }  from './models/contents.model';
-
+import { Links } from './models/links.model';
+import { random } from './util/random.util';
 
 const app = express();
 
@@ -157,7 +158,7 @@ app.get('/api/v1/content', async (req,res)=>{
 });
 
 // delete content route 
-app.delete('/api/v1/signin', async (req,res)=>{
+app.delete('/api/v1/delete', async (req,res)=>{
     const contentId = req.body.contentId;
 
     await Content.deleteOne({
@@ -168,12 +169,74 @@ app.delete('/api/v1/signin', async (req,res)=>{
 });
 
 // post / share brain route 
-app.post('/api/v1/brain/share',(req,res)=>{
-    
+app.post('/api/v1/brain/share', async (req,res)=>{
+    const share = req.body.share;  // true / false 
+    try{
+        if(share){
+            const hash = random(10)
+            await Links.create({
+                hash:  hash ,
+                // @ts-ignore
+                userId: req.userId
+            })
+            res.status(200).json({
+                message: "link genrated at: /share/" + hash
+            })
+        }
+        else{
+            await Links.deleteOne({
+                // @ts-ignore
+                userId: req.userId
+            }) 
+            res.status(200).json({
+                message: "Removed link"
+            })
+        }
+    }
+    catch(err)
+    {
+        res.status(400).json({
+            message: "Action is repreated"
+        })
+        return   
+    }
+
 });
 
 // post / share using id route 
-app.get('/api/v1/brain/:shareLink',(req,res)=>{    
+app.get('/api/v1/brain/:shareLink', async (req,res)=>{    
+    const hash = req.params.shareLink;
+    const link = await Links.findOne({
+        hash: hash
+    });
+
+    if(!link){
+        res.status(411).json({
+            message: "Sorry link not found!"
+        });
+        return ;
+    }
+
+    const constentShare = await Content.find({
+        userId :  link.userId
+    })
+
+    const userShare = await Users.findOne({
+        _id :  link.userId
+    })
+
+    if(!constentShare || !userShare){
+        res.status(400).json({
+            message : " No content or user found present!"
+        })  
+        return;  
+    }
+
+    res.status(200).json({
+        username: userShare.username,
+        constent: constentShare
+    })
+    
 });
 
 app.listen(PORT,()=>{
