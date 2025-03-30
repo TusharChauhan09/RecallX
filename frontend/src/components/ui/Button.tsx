@@ -11,17 +11,17 @@ interface ButtonProps {
     onClick: () => void;
 }
 
-const defaultStyle = " rounded-lg flex gap-1 justify-center items-center"
+const defaultStyle = " rounded-lg flex gap-1 justify-center items-center font-light "
 
 const variantStyles = {
-    "primary": "bg-purple-600 text-white hover:bg-purple-700",
-    "secondary": "bg-purple-300 text-purple-600 hover:bg-purple-200"
+    "primary": "bg-indigo-600 text-white hover:bg-indigo-700",
+    "secondary": "bg-indigo-300 text-indigo-600 hover:bg-indigo-200"
 }; 
 
 const sizeStyle = {
-    "sm": "px-4 py-1 text-sm",
-    "md": "px-6 py-2 text-md",
-    "lg": "px-8 py-3 text-lg",
+    "sm": "px-4 py-2 text-sm",
+    "md": "px-6 py-3 text-md",
+    "lg": "px-8 py-4 text-lg",
 }; 
 
 const Button = (props: ButtonProps) => {
